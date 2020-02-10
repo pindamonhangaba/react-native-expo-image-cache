@@ -8,6 +8,7 @@ import {
   View,
   Platform,
   ImageStyle,
+  ViewStyle,
   ImageURISource,
   ImageSourcePropType,
   StyleProp
@@ -17,7 +18,10 @@ import { BlurView } from "expo-blur";
 import CacheManager, { DownloadOptions } from "./CacheManager";
 
 interface ImageProps {
-  style?: StyleProp<ImageStyle>;
+  style?: StyleProp<ViewStyle>;
+  defaultSourceStyle?: StyleProp<ImageStyle>;
+  previewStyle?: StyleProp<ImageStyle>;
+  imageStyle?: StyleProp<ImageStyle>;
   defaultSource?: ImageURISource | number;
   preview?: ImageSourcePropType;
   options?: DownloadOptions;
@@ -86,7 +90,16 @@ export default class Image extends React.Component<ImageProps, ImageState> {
   }
 
   render() {
-    const { preview, style, defaultSource, tint, ...otherProps } = this.props;
+    const {
+      preview,
+      style,
+      defaultSource,
+      tint,
+      defaultSourceStyle,
+      previewStyle,
+      imageStyle,
+      ...otherProps
+    } = this.props;
     const { uri, intensity } = this.state;
     const isImageReady = !!uri;
     const opacity = intensity.interpolate({
@@ -96,22 +109,25 @@ export default class Image extends React.Component<ImageProps, ImageState> {
     const flattenedStyle = StyleSheet.flatten(style);
     const computedStyle: StyleProp<ImageStyle> = [
       StyleSheet.absoluteFill,
-      _.transform(_.pickBy(flattenedStyle, (_val, key) => propsToCopy.indexOf(key) !== -1), (result, value: any, key) =>
-        Object.assign(result, { [key]: value - (flattenedStyle.borderWidth || 0) })
+      _.transform(
+        _.pickBy(flattenedStyle, (_val, key) => propsToCopy.indexOf(key) !== -1),
+        (result, value: any, key) => Object.assign(result, { [key]: value - (flattenedStyle.borderWidth || 0) })
       )
     ];
     return (
       <View {...{ style }}>
-        {!!defaultSource && !isImageReady && <RNImage source={defaultSource} style={computedStyle} {...otherProps} />}
+        {!!defaultSource && !isImageReady && (
+          <RNImage source={defaultSource} style={[computedStyle, defaultSourceStyle]} {...otherProps} />
+        )}
         {!!preview && (
           <RNImage
             source={preview}
-            style={computedStyle}
+            style={[computedStyle, previewStyle]}
             blurRadius={Platform.OS === "android" ? 0.5 : 0}
             {...otherProps}
           />
         )}
-        {isImageReady && <RNImage source={{ uri }} style={computedStyle} {...otherProps} />}
+        {isImageReady && <RNImage source={{ uri }} style={[computedStyle, imageStyle]} {...otherProps} />}
         {!!preview && Platform.OS === "ios" && <AnimatedBlurView style={computedStyle} {...{ intensity, tint }} />}
         {!!preview && Platform.OS === "android" && (
           <Animated.View style={[computedStyle, { backgroundColor: tint === "dark" ? black : white, opacity }]} />
